@@ -186,6 +186,38 @@ export default function Kitchen() {
     }
   }, [selectedMode, typedEmojiInput]);
 
+  useEffect(() => {
+    if (!metadataReady) {
+      return;
+    }
+
+    const typedMatches = extractSupportedEmojiFromInput(typedEmojiInput).slice(
+      0,
+      2,
+    );
+    const nextTypedLeftEmoji = typedMatches[0] ?? "";
+    const emojiToLoad = [
+      nextTypedLeftEmoji,
+      selectedLeftEmoji,
+      selectedRightEmoji,
+      leftEmojiSelected ? selectedLeftEmoji : selectedRightEmoji,
+    ].filter((emojiCodepoint) => emojiCodepoint !== "");
+
+    if (emojiToLoad.length === 0) {
+      return;
+    }
+
+    ensureEmojiData(emojiToLoad).catch((error) => {
+      console.log(error);
+    });
+  }, [
+    metadataReady,
+    typedEmojiInput,
+    selectedLeftEmoji,
+    selectedRightEmoji,
+    leftEmojiSelected,
+  ]);
+
   const ensureEmojiData = async (emojiCodepoints: Array<string>) => {
     await preloadEmojiData(emojiCodepoints);
     setEmojiDataVersion((currentValue) => currentValue + 1);
@@ -591,33 +623,6 @@ export default function Kitchen() {
     border: "1px solid rgba(146, 116, 78, 0.14)",
     boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.72)",
   };
-
-  useEffect(() => {
-    if (!metadataReady) {
-      return;
-    }
-
-    const emojiToLoad = [
-      typedLeftEmoji,
-      selectedLeftEmoji,
-      selectedRightEmoji,
-      leftEmojiSelected ? selectedLeftEmoji : selectedRightEmoji,
-    ].filter((emojiCodepoint) => emojiCodepoint !== "");
-
-    if (emojiToLoad.length === 0) {
-      return;
-    }
-
-    ensureEmojiData(emojiToLoad).catch((error) => {
-      console.log(error);
-    });
-  }, [
-    metadataReady,
-    typedLeftEmoji,
-    selectedLeftEmoji,
-    selectedRightEmoji,
-    leftEmojiSelected,
-  ]);
 
   // Middle list logic (could be better)
   if (isMobile) {
