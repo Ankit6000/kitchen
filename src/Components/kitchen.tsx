@@ -275,6 +275,10 @@ export default function Kitchen() {
       (codepoint) => codepoint !== selectedRightEmoji, // Don't randomly choose the same right emoji
     );
 
+    if (possibleEmoji.length === 0) {
+      return;
+    }
+
     const randomEmoji =
       possibleEmoji[Math.floor(Math.random() * possibleEmoji.length)];
 
@@ -300,6 +304,10 @@ export default function Kitchen() {
     const possibleRightEmoji = Object.keys(data.combinations).filter(
       (codepoint) => codepoint !== randomLeftEmoji,
     );
+
+    if (possibleRightEmoji.length === 0) {
+      return;
+    }
 
     const randomRightEmoji =
       possibleRightEmoji[Math.floor(Math.random() * possibleRightEmoji.length)];
@@ -381,9 +389,13 @@ export default function Kitchen() {
     if (!hasEmojiData(selectedLeftEmoji)) {
       return;
     }
-    var combination = getEmojiData(selectedLeftEmoji).combinations[
-      selectedRightEmoji
-    ].filter((c) => c.isLatest)[0];
+    const combinationMatches =
+      getEmojiData(selectedLeftEmoji).combinations[selectedRightEmoji];
+    const combination = combinationMatches?.filter((c) => c.isLatest)[0];
+
+    if (!combination) {
+      return;
+    }
 
     saveAs(combination.gStaticUrl, combination.alt);
   };
@@ -515,11 +527,20 @@ export default function Kitchen() {
         ),
       ]
     : typedAllCombinations;
-  const typedEmojiSummary = typedEmojiMatches.map((emojiCodepoint) => ({
-    codepoint: emojiCodepoint,
-    emoji: toPrintableEmoji(emojiCodepoint),
-    alt: getEmojiSummary(emojiCodepoint).alt,
-  }));
+  const typedEmojiSummary = typedEmojiMatches
+    .map((emojiCodepoint) => {
+      const summary = getEmojiSummary(emojiCodepoint);
+      if (!summary) {
+        return null;
+      }
+
+      return {
+        codepoint: emojiCodepoint,
+        emoji: toPrintableEmoji(emojiCodepoint),
+        alt: summary.alt,
+      };
+    })
+    .filter((summary) => summary !== null);
   const quickKeyboardEmoji = [
     "1f602",
     "1f970",
@@ -671,12 +692,15 @@ export default function Kitchen() {
           }
         }
 
-        combination = combinations[otherEmoji].filter((c) => c.isLatest)[0];
+        const activeCombinations = combinations[otherEmoji];
+        combination = activeCombinations?.filter((c) => c.isLatest)[0];
 
-        middleList = (
+        middleList = combination ? (
           <ImageListItem>
             <img alt={combination.alt} src={combination.gStaticUrl} />
           </ImageListItem>
+        ) : (
+          <div></div>
         );
       }
     } else {
@@ -748,14 +772,16 @@ export default function Kitchen() {
     else {
       showOneCombo = true;
       if (hasEmojiData(selectedLeftEmoji)) {
-        combination = getEmojiData(selectedLeftEmoji).combinations[
-          selectedRightEmoji
-        ].filter((c) => c.isLatest)[0];
+        const selectedCombinations =
+          getEmojiData(selectedLeftEmoji).combinations[selectedRightEmoji];
+        combination = selectedCombinations?.filter((c) => c.isLatest)[0];
 
-        middleList = (
+        middleList = combination ? (
           <ImageListItem>
             <img alt={combination.alt} src={combination.gStaticUrl} />
           </ImageListItem>
+        ) : (
+          <div></div>
         );
       } else {
         middleList = <div></div>;

@@ -1,5 +1,9 @@
+import Alert from "@mui/material/Alert";
+import Container from "@mui/material/Container";
 import CssBaseline from "@mui/material/CssBaseline";
+import Typography from "@mui/material/Typography";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
+import React from "react";
 import Footer from "./Components/footer";
 import Kitchen from "./Components/kitchen";
 
@@ -80,24 +84,84 @@ const theme = createTheme({
   },
 });
 
-export default function App() {
-  if (window.self === window.top) {
+type ErrorBoundaryProps = {
+  children: React.ReactNode;
+};
+
+type ErrorBoundaryState = {
+  error: Error | null;
+};
+
+class AppErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = {
+    error: null,
+  };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error(error);
+  }
+
+  render() {
+    if (!this.state.error) {
+      return this.props.children;
+    }
+
     return (
-      <div
-        style={{
+      <Container
+        maxWidth="sm"
+        sx={{
           minHeight: "100dvh",
           display: "flex",
-          flexDirection: "column",
-          background:
-            "radial-gradient(circle at top left, rgba(249, 168, 37, 0.12), transparent 24%), radial-gradient(circle at bottom right, rgba(13, 148, 136, 0.12), transparent 26%)",
+          alignItems: "center",
+          justifyContent: "center",
+          py: 4,
         }}
       >
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Kitchen />
-        </ThemeProvider>
-        <Footer />
-      </div>
+        <Alert
+          severity="error"
+          sx={{
+            width: "100%",
+            borderRadius: 4,
+            boxShadow: "0 18px 40px rgba(83, 63, 35, 0.12)",
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 0.5 }}>
+            The app hit a runtime error.
+          </Typography>
+          <Typography variant="body2">
+            {this.state.error.message || "Unknown error"}
+          </Typography>
+        </Alert>
+      </Container>
     );
   }
+}
+
+export default function App() {
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        background:
+          "radial-gradient(circle at top left, rgba(249, 168, 37, 0.12), transparent 24%), radial-gradient(circle at bottom right, rgba(13, 148, 136, 0.12), transparent 26%)",
+      }}
+    >
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AppErrorBoundary>
+          <Kitchen />
+        </AppErrorBoundary>
+      </ThemeProvider>
+      <Footer />
+    </div>
+  );
 }
