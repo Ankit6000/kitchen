@@ -148,9 +148,10 @@ export default function App() {
   return (
     <div
       style={{
-        minHeight: "100dvh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
         background:
           "radial-gradient(circle at top left, rgba(249, 168, 37, 0.12), transparent 24%), radial-gradient(circle at bottom right, rgba(13, 148, 136, 0.12), transparent 26%)",
       }}

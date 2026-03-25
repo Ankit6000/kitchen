@@ -1523,12 +1523,13 @@ export default function Kitchen() {
         flexGrow: "1",
         display: "flex",
         flexDirection: "row",
-        overflowY: "auto",
+        overflow: "hidden",
         mt: 0,
         px: 2,
         py: 1.5,
         gap: 2,
         position: "relative",
+        minHeight: 0,
       }}
     >
       {/* Left Emoji Column */}
@@ -1539,6 +1540,7 @@ export default function Kitchen() {
           justifyItems: "center",
           flexGrow: "1",
           width: "33%",
+          minHeight: 0,
           borderRadius: 6,
           px: 0.5,
           py: 1,
@@ -1635,6 +1637,7 @@ export default function Kitchen() {
           justifyItems: "center",
           flexGrow: "1",
           width: "33%",
+          minHeight: 0,
           position: "relative",
           display: showOneCombo ? "flex" : null,
           alignItems: showOneCombo ? "center" : null,
@@ -1687,6 +1690,7 @@ export default function Kitchen() {
           justifyItems: "center",
           flexGrow: "1",
           width: "33%",
+          minHeight: 0,
           borderRadius: 6,
           px: 0.5,
           py: 1,
