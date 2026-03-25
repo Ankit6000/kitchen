@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fetch:metadata": "node ./scripts/fetch-metadata.mjs",
+    "prebuild": "npm run fetch:metadata",
     "build": "vite build",
     "serve": "vite preview",
     "start": "vite"
@@ -35,8 +37,10 @@
     "eslint-config-react-app": "^7.0.1",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
+    "png-to-ico": "^3.0.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.4",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
     "vite": "^7.3.1",

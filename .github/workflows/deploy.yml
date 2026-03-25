@@ -7,37 +7,47 @@ on:
     paths:
       - "src/**"
       - "public/**"
+      - "scripts/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout code 🛎
+      - name: Checkout
         uses: actions/checkout@v6
-        with:
-          persist-credentials: false
 
-      - name: Download Emoji Kitchen Metadata 💾
-        uses: xsalazar/actions/downloader@master
-        with:
-          url: "https://raw.githubusercontent.com/xsalazar/emoji-kitchen-backend/main/app/metadata.json"
-          filename: "public/metadata.json"
-
-      - name: Setup Node 🏗
+      - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: "24"
 
-      - name: Install and Build 🔧
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install and Build
         run: |
           export NODE_OPTIONS="--max_old_space_size=8192"
           npm install
           npm run build
 
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4.8.0
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          branch: gh-pages
-          folder: build
-          CLEAN: true # Automatically remove deleted files from the deploy branch
+          path: build
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -7,7 +7,7 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useDebounce } from "@uidotdev/usehooks";
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { getEmojiData, getNotoEmojiUrl } from "./utils";
+import { getEmojiData, getNotoEmojiUrl, searchSupportedEmoji } from "./utils";
 
 export default function Search({
   disabled,
@@ -29,6 +29,13 @@ export default function Search({
   const debouncedSearchTerm = useDebounce(value, 300);
 
   const hasSearchValue = value !== "";
+  const searchShellSx = {
+    background:
+      "linear-gradient(180deg, rgba(255, 251, 245, 0.9) 0%, rgba(248, 239, 225, 0.82) 100%)",
+    border: "1px solid rgba(146, 116, 78, 0.14)",
+    borderRadius: 999,
+    boxShadow: "0 16px 34px rgba(83, 63, 35, 0.08)",
+  };
 
   /**
    * Hacky input to clear text box when full randomizing from parent element while search results are shown
@@ -41,7 +48,7 @@ export default function Search({
    * Debounce and sanitize search queries
    */
   useEffect(() => {
-    async function search() {
+    function search() {
       let results = [];
       setIsSearching(true);
       if (debouncedSearchTerm) {
@@ -50,10 +57,7 @@ export default function Search({
           requestQuery.length > 128
             ? requestQuery.substring(0, 127)
             : requestQuery;
-        const data = await fetch(
-          `https://backend.emojikitchen.dev/?q=${requestQuery}`
-        );
-        results = await data.json();
+        results = searchSupportedEmoji(requestQuery);
       }
 
       setIsSearching(false);
@@ -71,12 +75,13 @@ export default function Search({
     return (
       <Paper
         sx={{
+          ...searchShellSx,
           position: "sticky",
-          top: 3,
+          top: 10,
           zIndex: 1,
-          mx: 1.5,
+          mx: 0.5,
           mb: 1,
-          p: "2px 4px",
+          p: "4px 8px",
           display: "flex",
           alignItems: "center",
         }}
@@ -89,7 +94,7 @@ export default function Search({
           )}
         </IconButton>
         <InputBase
-          sx={{ ml: 1, flex: 1 }}
+          sx={{ ml: 1, flex: 1, fontWeight: 600 }}
           placeholder="Search Emoji"
           value={value}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,12 +117,13 @@ export default function Search({
   return (
     <Paper
       sx={{
+        ...searchShellSx,
         position: "sticky",
-        top: 3,
+        top: 10,
         zIndex: 1,
-        mx: 1.5,
+        mx: 0.5,
         mb: 1,
-        p: "2px 4px",
+        p: "4px 8px",
         display: "flex",
         width: "-webkit-fill-available",
       }}
@@ -130,7 +136,7 @@ export default function Search({
         )}
       </IconButton>
       <InputBase
-        sx={{ ml: 1, flex: 1 }}
+        sx={{ ml: 1, flex: 1, fontWeight: 600 }}
         placeholder="Search Emoji"
         value={value}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {

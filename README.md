@@ -1,8 +1,8 @@
-# 🧑‍🍳 Emoji Kitchen
+# TTM Kitchen
 
-This repository contains the source code for the website [https://emojikitchen.dev](https://emojikitchen.dev).
+This repository contains the source code for TTM Kitchen, an iPhone-friendly Emoji Kitchen style web app.
 
-This website allows for quick and easy browsing of the comprehensive list of supported emoji mashups as part of Google's [Emoji Kitchen](https://emojipedia.org/emoji-kitchen/).
+The app lets people type two emoji, browse mashups in a sticker-style tray, and tap a result to copy or download it quickly.
 
 There are currently over 100,000 possible valid combinations showcasing the unique illustrations and combined emoji!
 
@@ -12,19 +12,38 @@ This repository leverages [VSCode's devcontainer](https://code.visualstudio.com/
 
 ### Application
 
-To get started, download the supporting metadata into `public/` (so the app can load it at runtime), then install and start the project:
+To get started, fetch the supporting metadata into `public/`, then install and start the project:
 
 ```bash
-curl -L --compressed https://raw.githubusercontent.com/xsalazar/emoji-kitchen-backend/main/app/metadata.json -o public/metadata.json
-npm install && npm start
+npm install
+npm run fetch:metadata
+npm start
 ```
 
 The metadata is loaded asynchronously after the app, which keeps the initial JavaScript bundle small and improves startup time.
+
+`npm run build` also auto-fetches metadata if `public/metadata.json` is missing, which keeps Vercel and Netlify deploys simple without committing a 90MB+ data file.
 
 This will start the application on your local machine, running on [http://localhost:5173/](http://localhost:5173).
 
 ### Deployments
 
-All application deployments are managed via GitHub Actions and the [`./.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) workflow.
+The app is ready for all three of these deployment paths:
+
+- GitHub Pages: already configured in [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml). The workflow downloads fresh metadata and deploys the Vite `build/` output.
+- Vercel: import the repo and deploy. [`vercel.json`](./vercel.json) points Vercel at `npm run build` and `build/`. The `prebuild` hook downloads metadata automatically.
+- Netlify: import the repo and deploy. [`netlify.toml`](./netlify.toml) sets the publish directory to `build/` and adds an SPA fallback. The `prebuild` hook downloads metadata automatically.
+
+If you deploy to your own domain, update the social/share metadata in [`index.html`](./index.html) if you want the preview URL tags to point to that final domain.
+
+### App Icon Path
+
+If you want to replace the PWA icon before pushing, put your final icon files here:
+
+- `public/branding/ttm-kitchen-app-icon.png`
+- `public/branding/ttm-kitchen-app-icon-192.png`
+- `public/branding/ttm-kitchen-app-icon-512.png`
+
+Those paths are already wired into the manifest and iPhone home-screen icon tags.
 
 Additionally, application dependencies are automatically managed and updated via Dependabot and the [`./.github/workflows/automerge-dependabot.yml`](./.github/workflows/automerge-dependabot.yml) workflow.
