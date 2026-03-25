@@ -4,7 +4,6 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Typography from "@mui/material/Typography";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import React from "react";
-import Footer from "./Components/footer";
 import Kitchen from "./Components/kitchen";
 
 const theme = createTheme({
@@ -162,7 +161,6 @@ export default function App() {
           <Kitchen />
         </AppErrorBoundary>
       </ThemeProvider>
-      <Footer />
     </div>
   );
 }
