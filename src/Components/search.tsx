@@ -7,7 +7,11 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useDebounce } from "@uidotdev/usehooks";
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { getEmojiData, getNotoEmojiUrl, searchSupportedEmoji } from "./utils";
+import {
+  getEmojiSummary,
+  getNotoEmojiUrl,
+  searchSupportedEmoji,
+} from "./utils";
 
 export default function Search({
   disabled,
@@ -164,8 +168,8 @@ export default function Search({
             loading="lazy"
             width="24px"
             height="24px"
-            alt={getEmojiData(selectedEmoji).alt}
-            src={getNotoEmojiUrl(getEmojiData(selectedEmoji).emojiCodepoint)}
+            alt={getEmojiSummary(selectedEmoji).alt}
+            src={getNotoEmojiUrl(getEmojiSummary(selectedEmoji).emojiCodepoint)}
           />
         ) : (
           <Typography

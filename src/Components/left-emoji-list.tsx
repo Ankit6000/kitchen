@@ -1,6 +1,6 @@
 import { ImageListItem } from "@mui/material";
 import React, { Dispatch } from "react";
-import { getEmojiData, getNotoEmojiUrl, getSupportedEmoji } from "./utils";
+import { getEmojiSummary, getNotoEmojiUrl, getSupportedEmoji } from "./utils";
 
 export default function LeftEmojiList({
   handleLeftEmojiClicked,
@@ -23,7 +23,7 @@ export default function LeftEmojiList({
   }
 
   return knownSupportedEmoji.map((emojiCodepoint) => {
-    const data = getEmojiData(emojiCodepoint);
+    const data = getEmojiSummary(emojiCodepoint);
 
     return (
       <div

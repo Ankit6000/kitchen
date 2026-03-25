@@ -1,6 +1,12 @@
 import { ImageListItem } from "@mui/material";
 import { Dispatch } from "react";
-import { getEmojiData, getNotoEmojiUrl, getSupportedEmoji } from "./utils";
+import {
+  getEmojiData,
+  getEmojiSummary,
+  getNotoEmojiUrl,
+  getSupportedEmoji,
+  hasEmojiData,
+} from "./utils";
 
 export default function MobileEmojiList({
   handleEmojiClicked,
@@ -29,13 +35,16 @@ export default function MobileEmojiList({
   }
 
   if (selectedMode === "combine") {
-    const data = getEmojiData(selectedOtherEmoji);
-    var possibleEmoji = Object.keys(data.combinations);
+    var possibleEmoji = hasEmojiData(selectedOtherEmoji)
+      ? Object.keys(getEmojiData(selectedOtherEmoji).combinations)
+      : [];
 
     return knownSupportedEmoji.map((emojiCodepoint) => {
-      const data = getEmojiData(emojiCodepoint);
+      const data = getEmojiSummary(emojiCodepoint);
 
-      const isValidCombo = possibleEmoji.includes(emojiCodepoint);
+      const isValidCombo =
+        hasEmojiData(selectedOtherEmoji) &&
+        possibleEmoji.includes(emojiCodepoint);
 
       return (
         <div key={data.alt}>
@@ -74,7 +83,7 @@ export default function MobileEmojiList({
     });
   } else {
     return knownSupportedEmoji.map((emojiCodepoint) => {
-      const data = getEmojiData(emojiCodepoint);
+      const data = getEmojiSummary(emojiCodepoint);
 
       return (
         <div key={data.alt}>

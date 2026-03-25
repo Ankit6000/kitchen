@@ -24,3 +24,5 @@ yarn-error.log*
 
 metadata.json
 public/metadata.json
+public/metadata/
+public/metadata.download.json

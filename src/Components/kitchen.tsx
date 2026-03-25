@@ -33,9 +33,12 @@ import { MouseCoordinates } from "./types";
 import {
   extractSupportedEmojiFromInput,
   getEmojiData,
+  getEmojiSummary,
   getNotoEmojiUrl,
   getSupportedEmoji,
+  hasEmojiData,
   loadMetadata,
+  preloadEmojiData,
   toPrintableEmoji,
 } from "./utils";
 
@@ -58,6 +61,7 @@ export default function Kitchen() {
   const [copyFeedback, setCopyFeedback] = useState("");
   const [typedEmojiInput, setTypedEmojiInput] = useState("");
   const [isTypeComposerExpanded, setIsTypeComposerExpanded] = useState(true);
+  const [emojiDataVersion, setEmojiDataVersion] = useState(0);
 
   // Downloading helpers
   const [bulkDownloadMenu, setBulkDownloadMenu] = useState<
@@ -182,6 +186,11 @@ export default function Kitchen() {
     }
   }, [selectedMode, typedEmojiInput]);
 
+  const ensureEmojiData = async (emojiCodepoints: Array<string>) => {
+    await preloadEmojiData(emojiCodepoints);
+    setEmojiDataVersion((currentValue) => currentValue + 1);
+  };
+
   /**
    * 👈 Handler when an emoji is selected from the left-hand list
    */
@@ -210,8 +219,9 @@ export default function Kitchen() {
   /**
    * 🎲 Handler when left-hand randomize button clicked
    */
-  const handleLeftEmojiRandomize = () => {
+  const handleLeftEmojiRandomize = async () => {
     if (isMobile) {
+      await ensureEmojiData([selectedRightEmoji]);
       // On mobile, use the right emoji as a base and select a random left emoji from the supported list
       const data = getEmojiData(selectedRightEmoji);
       const possibleLeftEmoji = Object.keys(data.combinations).filter(
@@ -258,7 +268,8 @@ export default function Kitchen() {
   /**
    * 🎲 Handle right-hand randomize button clicked
    */
-  const handleRightEmojiRandomize = () => {
+  const handleRightEmojiRandomize = async () => {
+    await ensureEmojiData([selectedLeftEmoji]);
     const data = getEmojiData(selectedLeftEmoji);
     const possibleEmoji = Object.keys(data.combinations).filter(
       (codepoint) => codepoint !== selectedRightEmoji, // Don't randomly choose the same right emoji
@@ -277,13 +288,14 @@ export default function Kitchen() {
   /**
    * 🎲 Handle full randomize button clicked
    */
-  const handleFullEmojiRandomize = () => {
+  const handleFullEmojiRandomize = async () => {
     const knownSupportedEmoji = getSupportedEmoji();
     const randomLeftEmoji =
       knownSupportedEmoji[
         Math.floor(Math.random() * knownSupportedEmoji.length)
       ];
 
+    await ensureEmojiData([randomLeftEmoji]);
     const data = getEmojiData(randomLeftEmoji);
     const possibleRightEmoji = Object.keys(data.combinations).filter(
       (codepoint) => codepoint !== randomLeftEmoji,
@@ -335,6 +347,7 @@ export default function Kitchen() {
       (JSZip as any).defaults.date = dateWithOffset;
 
       const zip = new JSZip();
+      await ensureEmojiData([selectedLeftEmoji]);
       const data = getEmojiData(selectedLeftEmoji);
       const photoZip = zip.folder(data.alt)!;
 
@@ -365,6 +378,9 @@ export default function Kitchen() {
    * 💾 Handle single combination downloads
    */
   const handleImageDownload = () => {
+    if (!hasEmojiData(selectedLeftEmoji)) {
+      return;
+    }
     var combination = getEmojiData(selectedLeftEmoji).combinations[
       selectedRightEmoji
     ].filter((c) => c.isLatest)[0];
@@ -377,6 +393,7 @@ export default function Kitchen() {
    */
   const handleImageCopy = async (url?: string, alt?: string) => {
     if (!url) {
+      await ensureEmojiData([selectedLeftEmoji]);
       const selectedCombination = getEmojiData(selectedLeftEmoji).combinations[
         selectedRightEmoji
       ]?.filter((c) => c.isLatest)[0];
@@ -475,7 +492,9 @@ export default function Kitchen() {
   const typedLeftEmoji = typedEmojiMatches[0] ?? "";
   const typedRightEmoji = typedEmojiMatches[1] ?? "";
   const typedLeftEmojiData =
-    typedLeftEmoji !== "" ? getEmojiData(typedLeftEmoji) : undefined;
+    typedLeftEmoji !== "" && hasEmojiData(typedLeftEmoji)
+      ? getEmojiData(typedLeftEmoji)
+      : undefined;
   const typedAllCombinations = typedLeftEmojiData
     ? Object.values(typedLeftEmojiData.combinations)
         .flat()
@@ -499,7 +518,7 @@ export default function Kitchen() {
   const typedEmojiSummary = typedEmojiMatches.map((emojiCodepoint) => ({
     codepoint: emojiCodepoint,
     emoji: toPrintableEmoji(emojiCodepoint),
-    alt: getEmojiData(emojiCodepoint).alt,
+    alt: getEmojiSummary(emojiCodepoint).alt,
   }));
   const quickKeyboardEmoji = [
     "1f602",
@@ -519,7 +538,7 @@ export default function Kitchen() {
     .map((emojiCodepoint) => ({
       codepoint: emojiCodepoint,
       emoji: toPrintableEmoji(emojiCodepoint),
-      alt: getEmojiData(emojiCodepoint).alt,
+      alt: getEmojiSummary(emojiCodepoint).alt,
     }));
 
   const handleQuickEmojiInsert = (emoji: string) => {
@@ -551,6 +570,33 @@ export default function Kitchen() {
     border: "1px solid rgba(146, 116, 78, 0.14)",
     boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.72)",
   };
+
+  useEffect(() => {
+    if (!metadataReady) {
+      return;
+    }
+
+    const emojiToLoad = [
+      typedLeftEmoji,
+      selectedLeftEmoji,
+      selectedRightEmoji,
+      leftEmojiSelected ? selectedLeftEmoji : selectedRightEmoji,
+    ].filter((emojiCodepoint) => emojiCodepoint !== "");
+
+    if (emojiToLoad.length === 0) {
+      return;
+    }
+
+    ensureEmojiData(emojiToLoad).catch((error) => {
+      console.log(error);
+    });
+  }, [
+    metadataReady,
+    typedLeftEmoji,
+    selectedLeftEmoji,
+    selectedRightEmoji,
+    leftEmojiSelected,
+  ]);
 
   // Middle list logic (could be better)
   if (isMobile) {
@@ -605,65 +651,71 @@ export default function Kitchen() {
         : selectedLeftEmoji;
 
       // Get the possible combinations for that base
-      var combinations = getEmojiData(baseEmoji).combinations;
+      if (!hasEmojiData(baseEmoji)) {
+        middleList = <div></div>;
+      } else {
+        var combinations = getEmojiData(baseEmoji).combinations;
 
-      // If we're switching out of the browse mode, the resulting leftover combination may no longer be valid
-      // If so, generate a random pair and set the "other" appropriately
-      if (!Object.keys(combinations).includes(otherEmoji)) {
-        var possibleEmoji = Object.keys(combinations);
-        var otherEmoji =
-          possibleEmoji[Math.floor(Math.random() * possibleEmoji.length)];
+        // If we're switching out of the browse mode, the resulting leftover combination may no longer be valid
+        // If so, generate a random pair and set the "other" appropriately
+        if (!Object.keys(combinations).includes(otherEmoji)) {
+          var possibleEmoji = Object.keys(combinations);
+          var otherEmoji =
+            possibleEmoji[Math.floor(Math.random() * possibleEmoji.length)];
 
-        // Reset the "other" to a random valid combo
-        if (leftEmojiSelected) {
-          setSelectedRightEmoji(otherEmoji);
-        } else {
-          setSelectedLeftEmoji(otherEmoji);
+          // Reset the "other" to a random valid combo
+          if (leftEmojiSelected) {
+            setSelectedRightEmoji(otherEmoji);
+          } else {
+            setSelectedLeftEmoji(otherEmoji);
+          }
         }
+
+        combination = combinations[otherEmoji].filter((c) => c.isLatest)[0];
+
+        middleList = (
+          <ImageListItem>
+            <img alt={combination.alt} src={combination.gStaticUrl} />
+          </ImageListItem>
+        );
       }
-
-      combination = combinations[otherEmoji].filter((c) => c.isLatest)[0];
-
-      middleList = (
-        <ImageListItem>
-          <img alt={combination.alt} src={combination.gStaticUrl} />
-        </ImageListItem>
-      );
     } else {
       // Browse combination browser on mobile
       var baseEmoji = leftEmojiSelected
         ? selectedLeftEmoji
         : selectedRightEmoji;
-      middleList = Object.values(getEmojiData(baseEmoji).combinations)
-        .flat()
-        .filter((combination) => combination.isLatest)
-        .sort((c1, c2) => c1.gBoardOrder - c2.gBoardOrder)
-        .map((combination) => {
-          return (
-            <ButtonBase
-              onClick={(_) => handleImageCopy(combination.gStaticUrl)}
-              sx={{
-                p: 0.5,
-                borderRadius: 2,
-                "&:hover": {
-                  backgroundColor: (theme) => {
-                    return theme.palette.action.hover;
-                  },
-                },
-              }}
-            >
-              <ImageListItem key={combination.alt}>
-                <img
-                  loading="lazy"
-                  width="256px"
-                  height="256px"
-                  alt={combination.alt}
-                  src={combination.gStaticUrl}
-                />
-              </ImageListItem>
-            </ButtonBase>
-          );
-        });
+      middleList = hasEmojiData(baseEmoji)
+        ? Object.values(getEmojiData(baseEmoji).combinations)
+            .flat()
+            .filter((combination) => combination.isLatest)
+            .sort((c1, c2) => c1.gBoardOrder - c2.gBoardOrder)
+            .map((combination) => {
+              return (
+                <ButtonBase
+                  onClick={(_) => handleImageCopy(combination.gStaticUrl)}
+                  sx={{
+                    p: 0.5,
+                    borderRadius: 2,
+                    "&:hover": {
+                      backgroundColor: (theme) => {
+                        return theme.palette.action.hover;
+                      },
+                    },
+                  }}
+                >
+                  <ImageListItem key={combination.alt}>
+                    <img
+                      loading="lazy"
+                      width="256px"
+                      height="256px"
+                      alt={combination.alt}
+                      src={combination.gStaticUrl}
+                    />
+                  </ImageListItem>
+                </ButtonBase>
+              );
+            })
+        : <div></div>;
     }
   } else {
     // Neither are selected, show left list, empty middle list, and disable right list
@@ -672,36 +724,42 @@ export default function Kitchen() {
     }
     // Left emoji is selected, but not right, show the full list of combinations
     else if (selectedLeftEmoji !== "" && selectedRightEmoji === "") {
-      middleList = Object.values(getEmojiData(selectedLeftEmoji).combinations)
-        .flat()
-        .filter((combination) => combination.isLatest)
-        .sort((c1, c2) => c1.gBoardOrder - c2.gBoardOrder)
-        .map((combination) => {
-          return (
-            <ImageListItem key={combination.alt}>
-              <img
-                loading="lazy"
-                width="256px"
-                height="256px"
-                alt={combination.alt}
-                src={combination.gStaticUrl}
-              />
-            </ImageListItem>
-          );
-        });
+      middleList = hasEmojiData(selectedLeftEmoji)
+        ? Object.values(getEmojiData(selectedLeftEmoji).combinations)
+            .flat()
+            .filter((combination) => combination.isLatest)
+            .sort((c1, c2) => c1.gBoardOrder - c2.gBoardOrder)
+            .map((combination) => {
+              return (
+                <ImageListItem key={combination.alt}>
+                  <img
+                    loading="lazy"
+                    width="256px"
+                    height="256px"
+                    alt={combination.alt}
+                    src={combination.gStaticUrl}
+                  />
+                </ImageListItem>
+              );
+            })
+        : <div></div>;
     }
     // Both are selected, show the single combo
     else {
       showOneCombo = true;
-      combination = getEmojiData(selectedLeftEmoji).combinations[
-        selectedRightEmoji
-      ].filter((c) => c.isLatest)[0];
+      if (hasEmojiData(selectedLeftEmoji)) {
+        combination = getEmojiData(selectedLeftEmoji).combinations[
+          selectedRightEmoji
+        ].filter((c) => c.isLatest)[0];
 
-      middleList = (
-        <ImageListItem>
-          <img alt={combination.alt} src={combination.gStaticUrl} />
-        </ImageListItem>
-      );
+        middleList = (
+          <ImageListItem>
+            <img alt={combination.alt} src={combination.gStaticUrl} />
+          </ImageListItem>
+        );
+      } else {
+        middleList = <div></div>;
+      }
     }
   }
 
@@ -1012,16 +1070,16 @@ export default function Kitchen() {
                           ? "Waiting for emoji input"
                           : typedEmojiMatches.length === 1
                             ? `Detected ${typedEmojiMatches
-                                .map((emojiCodepoint) =>
-                                  getEmojiData(emojiCodepoint).alt,
-                                )
-                                .join(" + ")}`
-                            : typedExactCombination
-                              ? `Detected ${typedEmojiMatches
-                                  .map((emojiCodepoint) =>
-                                    getEmojiData(emojiCodepoint).alt,
-                                  )
-                                  .join(" + ")}`
+                            .map((emojiCodepoint) =>
+                              getEmojiSummary(emojiCodepoint).alt,
+                            )
+                            .join(" + ")}`
+                        : typedExactCombination
+                          ? `Detected ${typedEmojiMatches
+                              .map((emojiCodepoint) =>
+                                getEmojiSummary(emojiCodepoint).alt,
+                              )
+                              .join(" + ")}`
                               : "That pair has no direct mashup, so showing all mashups for the first emoji"}
                       </Typography>
                       <Paper
@@ -1107,9 +1165,9 @@ export default function Kitchen() {
                               padding: "8px",
                             }}
                             loading="lazy"
-                            alt={getEmojiData(selectedLeftEmoji).alt}
+                            alt={getEmojiSummary(selectedLeftEmoji).alt}
                             src={getNotoEmojiUrl(
-                              getEmojiData(selectedLeftEmoji).emojiCodepoint,
+                              getEmojiSummary(selectedLeftEmoji).emojiCodepoint,
                             )}
                           />
                         ) : null}
@@ -1173,9 +1231,9 @@ export default function Kitchen() {
                               padding: "8px",
                             }}
                             loading="lazy"
-                            alt={getEmojiData(selectedRightEmoji).alt}
+                            alt={getEmojiSummary(selectedRightEmoji).alt}
                             src={getNotoEmojiUrl(
-                              getEmojiData(selectedRightEmoji).emojiCodepoint,
+                              getEmojiSummary(selectedRightEmoji).emojiCodepoint,
                             )}
                           />
                         ) : null}

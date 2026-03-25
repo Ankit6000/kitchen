@@ -1,31 +1,56 @@
-import type { EmojiData, EmojiMetadata } from "./types";
+import type {
+  EmojiData,
+  EmojiMetadataIndex,
+  EmojiSummaryData,
+} from "./types";
 
-let cachedMetadata: EmojiMetadata | null = null;
+let cachedMetadataIndex: EmojiMetadataIndex | null = null;
 let cachedPrintableEmojiMap: Map<string, string> | null = null;
+let cachedEmojiDetails = new Map<string, EmojiData>();
 
-/**
- * Loads emoji metadata from the server (lazy-loaded to avoid blocking initial bundle).
- * Safe to call multiple times; subsequent calls resolve immediately with cached data.
- */
 export async function loadMetadata(): Promise<void> {
-  if (cachedMetadata) {
+  if (cachedMetadataIndex) {
     return;
   }
 
-  // Loaded via the `./public` directory and shipped with GitHub pages
-  var res = await fetch(`${import.meta.env.BASE_URL}metadata.json`);
+  const res = await fetch(`${import.meta.env.BASE_URL}metadata/index.json`);
   if (!res.ok) {
     throw new Error(`Failed to load metadata: ${res.status}`);
   }
 
-  cachedMetadata = (await res.json()) as EmojiMetadata;
+  cachedMetadataIndex = (await res.json()) as EmojiMetadataIndex;
   cachedPrintableEmojiMap = null;
-  return;
 }
 
-/**
- * Converts an emoji codepoint into a printable emoji used for log statements
- */
+export async function loadEmojiData(emojiCodepoint: string): Promise<void> {
+  if (cachedEmojiDetails.has(emojiCodepoint)) {
+    return;
+  }
+
+  const res = await fetch(
+    `${import.meta.env.BASE_URL}metadata/data/${emojiCodepoint}.json`,
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to load emoji detail: ${res.status}`);
+  }
+
+  cachedEmojiDetails.set(emojiCodepoint, (await res.json()) as EmojiData);
+}
+
+export async function preloadEmojiData(
+  emojiCodepoints: Array<string>,
+): Promise<void> {
+  const uniqueCodepoints = Array.from(
+    new Set(emojiCodepoints.filter((emojiCodepoint) => emojiCodepoint !== "")),
+  );
+
+  await Promise.all(uniqueCodepoints.map((emojiCodepoint) => loadEmojiData(emojiCodepoint)));
+}
+
+export function hasEmojiData(emojiCodepoint: string): boolean {
+  return cachedEmojiDetails.has(emojiCodepoint);
+}
+
 export function toPrintableEmoji(emojiCodepoint: string): string {
   return String.fromCodePoint(
     ...emojiCodepoint.split("-").map((p) => parseInt(`0x${p}`)),
@@ -41,13 +66,13 @@ export function toEmojiCodepoint(emoji: string): string {
 }
 
 function getSupportedPrintableEmojiMap(): Map<string, string> {
-  if (!cachedMetadata) {
+  if (!cachedMetadataIndex) {
     throw new Error("Metadata not loaded");
   }
 
   if (!cachedPrintableEmojiMap) {
     cachedPrintableEmojiMap = new Map(
-      cachedMetadata.knownSupportedEmoji.map((emojiCodepoint) => [
+      cachedMetadataIndex.knownSupportedEmoji.map((emojiCodepoint) => [
         toPrintableEmoji(emojiCodepoint),
         emojiCodepoint,
       ]),
@@ -72,35 +97,41 @@ export function extractSupportedEmojiFromInput(value: string): Array<string> {
   return matches;
 }
 
-/**
- * Converts an emoji codepoint into a static github reference image url
- */
 export function getNotoEmojiUrl(emojiCodepoint: string): string {
   return `https://raw.githubusercontent.com/googlefonts/noto-emoji/main/svg/emoji_u${emojiCodepoint
     .split("-")
     .filter((x) => x !== "fe0f")
-    .map((x) => x.padStart(4, "0")) // Handle ©️ and ®️
+    .map((x) => x.padStart(4, "0"))
     .join("_")}.svg`;
 }
 
-export function getEmojiData(emojiCodepoint: string): EmojiData {
-  if (!cachedMetadata) {
+export function getEmojiSummary(emojiCodepoint: string): EmojiSummaryData {
+  if (!cachedMetadataIndex) {
     throw new Error("Metadata not loaded");
   }
 
-  return cachedMetadata.data[emojiCodepoint];
+  return cachedMetadataIndex.summaries[emojiCodepoint];
+}
+
+export function getEmojiData(emojiCodepoint: string): EmojiData {
+  const data = cachedEmojiDetails.get(emojiCodepoint);
+  if (!data) {
+    throw new Error("Emoji detail not loaded");
+  }
+
+  return data;
 }
 
 export function getSupportedEmoji(): Array<string> {
-  if (!cachedMetadata) {
+  if (!cachedMetadataIndex) {
     throw new Error("Metadata not loaded");
   }
 
-  return cachedMetadata.knownSupportedEmoji;
+  return cachedMetadataIndex.knownSupportedEmoji;
 }
 
 export function searchSupportedEmoji(query: string): Array<string> {
-  if (!cachedMetadata) {
+  if (!cachedMetadataIndex) {
     throw new Error("Metadata not loaded");
   }
 
@@ -111,8 +142,8 @@ export function searchSupportedEmoji(query: string): Array<string> {
 
   const queryTerms = normalizedQuery.split(/\s+/).filter(Boolean);
 
-  return cachedMetadata.knownSupportedEmoji.filter((emojiCodepoint) => {
-    const emojiData = cachedMetadata!.data[emojiCodepoint];
+  return cachedMetadataIndex.knownSupportedEmoji.filter((emojiCodepoint) => {
+    const emojiData = cachedMetadataIndex!.summaries[emojiCodepoint];
     const haystack = [
       emojiData.alt,
       ...emojiData.keywords,

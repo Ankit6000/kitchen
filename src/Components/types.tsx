@@ -5,11 +5,21 @@ export interface EmojiMetadata {
   };
 }
 
-export interface EmojiData {
+export interface EmojiMetadataIndex {
+  knownSupportedEmoji: Array<string>;
+  summaries: {
+    [emojiCodepoint: string]: EmojiSummaryData;
+  };
+}
+
+export interface EmojiSummaryData {
   alt: string;
   keywords: Array<string>;
   emojiCodepoint: string;
   gBoardOrder: number;
+}
+
+export interface EmojiData extends EmojiSummaryData {
   combinations: { [otherEmojiCodepoint: string]: Array<EmojiCombination> };
 }
 

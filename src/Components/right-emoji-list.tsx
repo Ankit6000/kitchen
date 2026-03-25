@@ -1,6 +1,12 @@
 import { ImageListItem } from "@mui/material";
 import { Dispatch } from "react";
-import { getEmojiData, getNotoEmojiUrl, getSupportedEmoji } from "./utils";
+import {
+  getEmojiData,
+  getEmojiSummary,
+  getNotoEmojiUrl,
+  getSupportedEmoji,
+  hasEmojiData,
+} from "./utils";
 
 export default function RightEmojiList({
   handleRightEmojiClicked,
@@ -25,18 +31,20 @@ export default function RightEmojiList({
 
   // If we have a selectedLeftEmoji, save the valid combinations for that emoji
   var possibleEmoji: Array<string> = [];
-  if (hasSelectedLeftEmoji) {
+  if (hasSelectedLeftEmoji && hasEmojiData(selectedLeftEmoji)) {
     const data = getEmojiData(selectedLeftEmoji);
     possibleEmoji = Object.keys(data.combinations);
   }
 
   return knownSupportedEmoji.map((emojiCodepoint) => {
-    const data = getEmojiData(emojiCodepoint);
+    const data = getEmojiSummary(emojiCodepoint);
     // Every right-hand emoji is valid unless we have a selected left-hand emoji
     // In which case, we need to explicitly check if it's a valid combination
     var isValidCombo = true;
-    if (hasSelectedLeftEmoji) {
+    if (hasSelectedLeftEmoji && hasEmojiData(selectedLeftEmoji)) {
       isValidCombo = possibleEmoji.includes(emojiCodepoint);
+    } else if (hasSelectedLeftEmoji) {
+      isValidCombo = false;
     }
 
     return (
